@@ -32,7 +32,7 @@ export async function register(req, res) {
 
     res.status(201).json({ user, token })
   } catch (err) {
-    console.error(err)
+    console.error('Registration error:', err)
     res.status(500).json({ message: 'Server error during registration' })
   }
 }
@@ -50,6 +50,10 @@ export async function login(req, res) {
       return res.status(401).json({ message: 'Invalid email or password' })
     }
 
+    if (existing.status === 'blocked') {
+      return res.status(403).json({ message: 'Your account has been blocked' })
+    }
+
     const isMatch = await bcrypt.compare(password, existing.password)
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password' })
@@ -60,7 +64,7 @@ export async function login(req, res) {
 
     res.json({ user, token })
   } catch (err) {
-    console.error(err)
+    console.error('Login error:', err)
     res.status(500).json({ message: 'Server error during login' })
   }
 }
@@ -68,9 +72,12 @@ export async function login(req, res) {
 export async function getMe(req, res) {
   try {
     const user = await findUserById(req.userId)
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
     res.json({ user })
   } catch (err) {
-    console.error(err)
+    console.error('getMe error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 }

@@ -10,7 +10,8 @@ export function protect(req, res, next) {
   const token = authHeader.split(' ')[1]
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const secret = process.env.JWT_SECRET || 'farmshare_railway_jwt_secret_key_2024_secure'
+    const decoded = jwt.verify(token, secret)
     req.userId = decoded.id
     req.userRole = decoded.role
     next()

@@ -1,6 +1,6 @@
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import pool from './config/db.js'
 import authRoutes from './routes/authRoutes.js'
 import equipmentRoutes from './routes/equipmentRoutes.js'
@@ -8,8 +8,6 @@ import bookingRoutes from './routes/bookingRoutes.js'
 import paymentRoutes from './routes/paymentRoutes.js'
 import reviewRoutes from './routes/reviewRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
-
-dotenv.config()
 
 const app = express()
 
