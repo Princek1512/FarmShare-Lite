@@ -11,10 +11,13 @@ CREATE TABLE IF NOT EXISTS users (
   role ENUM('farmer', 'admin') NOT NULL DEFAULT 'farmer',
   location VARCHAR(255) NULL,
   status ENUM('active', 'blocked') NOT NULL DEFAULT 'active',
+  aadhaar_number VARCHAR(12) NULL,
+  is_aadhaar_verified TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_email (email),
+  UNIQUE KEY uq_users_aadhaar (aadhaar_number),
   KEY idx_users_role (role),
   KEY idx_users_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

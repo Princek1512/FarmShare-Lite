@@ -35,7 +35,26 @@ app.get('/api/health', async (req, res) => {
   }
 })
 
+async function ensureDbSchema() {
+  try {
+    const [cols] = await pool.query("SHOW COLUMNS FROM users LIKE 'aadhaar_number'")
+    if (cols.length === 0) {
+      console.log('Migrating: Adding aadhaar_number column to users table...')
+      await pool.query('ALTER TABLE users ADD COLUMN aadhaar_number VARCHAR(12) NULL UNIQUE AFTER phone')
+    }
+    const [verifiedCols] = await pool.query("SHOW COLUMNS FROM users LIKE 'is_aadhaar_verified'")
+    if (verifiedCols.length === 0) {
+      console.log('Migrating: Adding is_aadhaar_verified column to users table...')
+      await pool.query('ALTER TABLE users ADD COLUMN is_aadhaar_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER status')
+    }
+    console.log('Database schema for Aadhaar is up to date.')
+  } catch (err) {
+    console.warn('Aadhaar schema check note (proceeding normally):', err.message)
+  }
+}
+
 const PORT = process.env.PORT || 5000
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Server running on port ${PORT}`)
+  await ensureDbSchema()
 })
