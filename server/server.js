@@ -40,17 +40,29 @@ async function ensureDbSchema() {
     const [cols] = await pool.query("SHOW COLUMNS FROM users LIKE 'aadhaar_number'")
     if (cols.length === 0) {
       console.log('Migrating: Adding aadhaar_number column to users table...')
-      await pool.query('ALTER TABLE users ADD COLUMN aadhaar_number VARCHAR(12) NULL UNIQUE AFTER phone')
+      // TiDB requires adding the column first without inline UNIQUE constraint
+      await pool.query('ALTER TABLE users ADD COLUMN aadhaar_number VARCHAR(12) NULL AFTER phone')
+      try {
+        await pool.query('ALTER TABLE users ADD UNIQUE INDEX uq_users_aadhaar (aadhaar_number)')
+      } catch (idxErr) {
+        console.log('Aadhaar unique index note:', idxErr.message)
+      }
     }
+  } catch (err) {
+    console.warn('Aadhaar column check note:', err.message)
+  }
+
+  try {
     const [verifiedCols] = await pool.query("SHOW COLUMNS FROM users LIKE 'is_aadhaar_verified'")
     if (verifiedCols.length === 0) {
       console.log('Migrating: Adding is_aadhaar_verified column to users table...')
       await pool.query('ALTER TABLE users ADD COLUMN is_aadhaar_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER status')
     }
-    console.log('Database schema for Aadhaar is up to date.')
   } catch (err) {
-    console.warn('Aadhaar schema check note (proceeding normally):', err.message)
+    console.warn('is_aadhaar_verified column check note:', err.message)
   }
+
+  console.log('Database schema for Aadhaar check completed.')
 }
 
 const PORT = process.env.PORT || 5000
