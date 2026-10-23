@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
@@ -16,13 +16,21 @@ function Register() {
 
   const [otpSent, setOtpSent] = useState(false)
   const [otpLoading, setOtpLoading] = useState(false)
-  const [demoSms, setDemoSms] = useState(null)
+  const [countdown, setCountdown] = useState(0)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [loading, setLoading] = useState(false)
 
   const { user, register } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    let timer
+    if (countdown > 0) {
+      timer = setInterval(() => setCountdown((prev) => prev - 1), 1000)
+    }
+    return () => clearInterval(timer)
+  }, [countdown])
 
   if (user) {
     return <Navigate to="/" />
@@ -43,18 +51,12 @@ function Register() {
     setSuccessMsg('')
   }
 
-  // Quick helper to fill a valid test Aadhaar number
-  function handleUseSampleAadhaar() {
-    setForm({ ...form, aadhaar: '3675 9834 5616' })
-    setError('')
-  }
-
   async function handleSendOtp() {
     setError('')
     setSuccessMsg('')
 
     if (!isAadhaarChecksumValid) {
-      setError('Please enter a valid 12-digit Aadhaar number that conforms to the UIDAI checksum.')
+      setError('Please enter a valid 12-digit Aadhaar number.')
       return
     }
 
@@ -66,18 +68,12 @@ function Register() {
       })
 
       setOtpSent(true)
-      setSuccessMsg(res.data.message || 'OTP sent successfully!')
-      setDemoSms({
-        masked: res.data.maskedAadhaar,
-        otp: res.data.demoOtp,
-      })
-
-      // Auto-fill OTP field for demo convenience
-      if (res.data.demoOtp) {
-        setForm((prev) => ({ ...prev, otp: res.data.demoOtp }))
-      }
+      setCountdown(60) // 60s cooldown for resending
+      setSuccessMsg(res.data.message || 'OTP sent successfully to your Aadhaar-linked mobile number.')
+      // Clear OTP field so user enters it manually
+      setForm((prev) => ({ ...prev, otp: '' }))
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send Aadhaar OTP. Please try again.')
+      setError(err.response?.data?.message || 'Failed to send OTP. Please check your Aadhaar number.')
     } finally {
       setOtpLoading(false)
     }
@@ -87,13 +83,13 @@ function Register() {
     e.preventDefault()
     setError('')
 
-    if (!otpSent || !form.otp) {
-      setError('Please verify your Aadhaar number by requesting and entering the OTP.')
+    if (!otpSent || !form.otp.trim()) {
+      setError('Please request and enter the 6-digit OTP sent to your Aadhaar-linked mobile.')
       return
     }
 
     if (form.otp.trim().length !== 6) {
-      setError('Aadhaar OTP must be 6 digits.')
+      setError('Please enter the complete 6-digit OTP.')
       return
     }
 
@@ -109,7 +105,7 @@ function Register() {
       })
       navigate('/')
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Try again.')
+      setError(err.response?.data?.message || 'Verification failed. Please check the OTP.')
     } finally {
       setLoading(false)
     }
@@ -133,29 +129,9 @@ function Register() {
         )}
 
         {successMsg && !error && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-lg px-3 py-2.5 mb-4">
-            {successMsg}
-          </div>
-        )}
-
-        {/* Demo Simulated UIDAI SMS Toast */}
-        {demoSms && (
-          <div className="bg-amber-50 border border-amber-300 rounded-lg p-3.5 mb-4 text-xs text-amber-900 shadow-sm">
-            <div className="flex items-center justify-between font-semibold mb-1">
-              <span className="flex items-center gap-1">
-                <span>🔔</span> UIDAI SMS Notification (Free Mode):
-              </span>
-              <span className="bg-amber-200 text-amber-900 px-2 py-0.5 rounded text-[10px]">Demo</span>
-            </div>
-            <p className="mt-1">
-              OTP for Aadhaar <span className="font-mono font-bold">{demoSms.masked}</span> is{' '}
-              <span className="font-mono font-extrabold text-sm text-green-800 bg-white px-2 py-0.5 rounded border border-amber-300">
-                {demoSms.otp}
-              </span>
-            </p>
-            <p className="text-[11px] text-amber-700 mt-1.5 italic">
-              Auto-filled below for instant testing without SMS gateway charges.
-            </p>
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-lg px-3 py-2.5 mb-4 flex items-start gap-2">
+            <span className="text-emerald-600 font-bold mt-0.5">✓</span>
+            <span>{successMsg}</span>
           </div>
         )}
 
@@ -199,72 +175,60 @@ function Register() {
           />
         </div>
 
-        {/* Aadhaar Number with Verhoeff validation */}
+        {/* Aadhaar Verification Card */}
         <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between mb-1">
-            <label className="block text-xs font-semibold text-gray-800 uppercase tracking-wider">
-              Aadhaar Card Number
-            </label>
-            <button
-              type="button"
-              onClick={handleUseSampleAadhaar}
-              className="text-[11px] text-green-700 hover:text-green-800 underline font-medium"
-            >
-              Fill Sample Aadhaar
-            </button>
-          </div>
+          <label className="block text-xs font-semibold text-gray-800 uppercase tracking-wider mb-1">
+            Aadhaar Card Number
+          </label>
 
-          <div className="relative">
+          <div className="flex gap-2">
             <input
               name="aadhaar"
               value={form.aadhaar}
               onChange={handleAadhaarChange}
               maxLength={14}
               placeholder="1234 5678 9012"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 font-mono text-sm tracking-wider focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 font-mono text-sm tracking-wider focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
             />
+            <button
+              type="button"
+              disabled={!isAadhaarChecksumValid || otpLoading || countdown > 0}
+              onClick={handleSendOtp}
+              className="bg-green-700 hover:bg-green-800 disabled:opacity-40 text-white font-medium px-3 py-2 rounded-lg text-xs transition whitespace-nowrap"
+            >
+              {otpLoading ? 'Sending...' : countdown > 0 ? `Resend (${countdown}s)` : otpSent ? 'Resend OTP' : 'Get OTP'}
+            </button>
           </div>
 
-          {/* Validation Status indicator */}
-          <div className="mt-1.5 flex items-center justify-between text-xs">
+          <div className="mt-1.5 text-xs">
             {cleanAadhaar.length === 0 ? (
-              <span className="text-gray-400">12 digits required</span>
+              <span className="text-gray-400">Enter your 12-digit Aadhaar number</span>
             ) : isAadhaarChecksumValid ? (
-              <span className="text-emerald-700 font-medium flex items-center gap-1">
-                <span>✓</span> Valid UIDAI Aadhaar Checksum
-              </span>
+              <span className="text-emerald-700 font-medium">✓ Valid Aadhaar number</span>
             ) : cleanAadhaar.length === 12 ? (
-              <span className="text-rose-600 font-medium flex items-center gap-1">
-                <span>✗</span> Invalid Checksum (Verhoeff failed)
-              </span>
+              <span className="text-rose-600 font-medium">✗ Invalid Aadhaar checksum</span>
             ) : (
               <span className="text-gray-500">{12 - cleanAadhaar.length} more digits needed</span>
             )}
-
-            <button
-              type="button"
-              disabled={!isAadhaarChecksumValid || otpLoading}
-              onClick={handleSendOtp}
-              className="bg-green-700 hover:bg-green-800 disabled:opacity-40 text-white font-medium px-2.5 py-1 rounded text-xs transition"
-            >
-              {otpLoading ? 'Sending...' : otpSent ? 'Resend OTP' : 'Send OTP'}
-            </button>
           </div>
         </div>
 
-        {/* OTP Input (Shown once OTP is requested) */}
+        {/* OTP Input - Manual Entry */}
         {otpSent && (
-          <div className="mb-4 animate-fadeIn">
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-              Enter 6-Digit Aadhaar OTP
-            </label>
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Enter 6-Digit OTP
+              </label>
+              <span className="text-[11px] text-gray-500">Sent to linked mobile</span>
+            </div>
             <input
               name="otp"
               maxLength={6}
               value={form.otp}
               onChange={handleChange}
-              placeholder="e.g. 584920"
-              className="w-full border-2 border-green-500 rounded-lg px-3 py-2 font-mono text-center tracking-widest text-lg font-bold bg-green-50/30 focus:outline-none focus:ring-2 focus:ring-green-600"
+              placeholder="Enter 6-digit OTP"
+              className="w-full border-2 border-green-600 rounded-lg px-3 py-2 font-mono text-center tracking-widest text-lg font-bold bg-white focus:outline-none focus:ring-2 focus:ring-green-600"
             />
           </div>
         )}
@@ -289,7 +253,7 @@ function Register() {
           disabled={loading || !otpSent}
           className="w-full bg-green-700 text-white py-2.5 rounded-lg font-semibold hover:bg-green-800 disabled:opacity-50 transition shadow-sm text-sm"
         >
-          {loading ? 'Creating account...' : otpSent ? 'Verify Aadhaar & Register' : 'Request OTP to Continue'}
+          {loading ? 'Verifying...' : otpSent ? 'Verify OTP & Register' : 'Request OTP to Continue'}
         </button>
 
         <p className="text-xs text-gray-600 mt-4 text-center">
