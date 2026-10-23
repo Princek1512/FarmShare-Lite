@@ -51,7 +51,12 @@ export async function sendAadhaarOtp(req, res) {
     aadhaarOtpStore.set(cleanAadhaar, { otp, expiresAt, email })
 
     const masked = maskAadhaar(cleanAadhaar)
-    console.log(`[UIDAI GATEWAY] OTP dispatched for Aadhaar ${masked}: ${otp}`)
+    console.log('\n========================================')
+    console.log(`🔑 [AADHAAR OTP DISPATCHED]`)
+    console.log(`Aadhaar: ${cleanAadhaar} (${masked})`)
+    console.log(`OTP Code: ${otp}`)
+    console.log(`Time: ${new Date().toLocaleTimeString()}`)
+    console.log('========================================\n')
 
     return res.status(200).json({
       success: true,

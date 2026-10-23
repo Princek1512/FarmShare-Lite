@@ -14,6 +14,12 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+// Log all incoming requests for visibility in Render logs
+app.use((req, res, next) => {
+  console.log(`[REQ] ${req.method} ${req.originalUrl || req.url}`)
+  next()
+})
+
 app.get('/', (req, res) => {
   res.json({ message: 'FarmShare Lite API is running', health: '/api/health' })
 })
